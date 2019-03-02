@@ -1,0 +1,10 @@
+SerializationUtils è una libreria per il deep copy nella cartella jar per importarla da eclipse tasto destro
+sulla cartella progetto -> proprietà -> java build path -> add external Jars.
+
+Nella cartella soluzioni c'è il csv di output e i sei migliori percorsi per le sei istanze.
+
+Dentro il file Medie.csv abbiamo inserito le medie dei risultati.
+
+L'eseguibile è decisionSupport.jar ed è avviabile dal terminale:
+ad esempio: 
+java -jar decisionSupport.jar Instance1_2s_30c_4v.txt 30
