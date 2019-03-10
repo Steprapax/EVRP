@@ -31,9 +31,9 @@ public class Main {
 		
 		long limitTime= Integer.parseInt(args[1])*1000;
 		long starTimer= System.currentTimeMillis();
-		
+		int cont=0;
 		while(System.currentTimeMillis()<starTimer + limitTime) {		
-			
+			cont++;
 			ArrayList<Vehicle> clonedVehicle= new ArrayList<Vehicle>();
 			for(Vehicle v: vehicles) {
 				clonedVehicle.add(SerializationUtils.clone(v));	
@@ -88,7 +88,8 @@ public class Main {
 				k++;
 			}
 		}
-
+		
+		System.out.println(cont);
 		Result result= new Result();
 		result.outputFile(args[0], args[1], objective);
 	}
@@ -224,6 +225,13 @@ public class Main {
 //				kilowatt= vehicle.getMaxBattery()-vehicle.getCurrentBattery();
 //			else {
 				//kilowatt = 2*max*vehicle.getRo();
+			float min=Float.MAX_VALUE;
+			for(Customer cust: customers){
+				float nodeDist= nodeDistance(cust.getId(), recharger.getId());
+					if(nodeDist<min) {
+						min= nodeDist;
+					}
+			}
 				Random rand = new Random();
 				float filling= (float)(vehicle.getCurrentBattery()/(vehicle.getMaxBattery()-0.000001) + rand.nextFloat() * (1 - vehicle.getCurrentBattery()/(vehicle.getMaxBattery()-0.000001)));
 				kilowatt= vehicle.getMaxBattery()*filling - vehicle.getCurrentBattery();
@@ -233,42 +241,62 @@ public class Main {
 		float initialArrivalTime= vehicle.getTravelTime();
 		
 		if(vehicle.getId()==1 || vehicle.getId()==3 ||vehicle.getId()==5) {
-			Interval intervalSet= new Interval();
-			intervalSet.start= vehicle.getTravelTime();
-			
-			float battery = vehicle.getCurrentBattery();
-			vehicle.setCurrentBattery(vehicle.getCurrentBattery() + kilowatt);
-			
-			possibleSolution.add(new InfoForWriter(vehicle.getId(), vehicle.getCurrentNodeId(), recharger.getId(), rechargerDist, 0, 0, 0, 0, vehicle.getTravelTime(), battery, vehicle.getCapacity(), kilowatt/vehicle.getAlpha(), 1, vehicle.getTravelTime()));
+			if(vehicle.getCurrentNodeId()==recharger.id){
+				Interval interv= interval.get(interval.size()-1);
 
-			vehicle.setTravelTime(vehicle.getTravelTime() + kilowatt/vehicle.getAlpha());
-			
-			intervalSet.setEnd(vehicle.getTravelTime());
-			
-			vehicle.setTravelKm(vehicle.getTravelKm() + rechargerDist);
-			vehicle.setCurrentNodeId(recharger.getId());
-			
-			interval.add(intervalSet);
-
-			return vehicle.getCurrentNodeId();
+				Interval intervalSet= new Interval();
+				intervalSet.start= interv.start;
+				
+				float battery = vehicle.getCurrentBattery();
+				vehicle.setCurrentBattery(vehicle.getCurrentBattery() + kilowatt);
+				
+				possibleSolution.add(new InfoForWriter(vehicle.getId(), vehicle.getCurrentNodeId(), recharger.getId(), rechargerDist, 0, 0, 0, 0, vehicle.getTravelTime(), battery, vehicle.getCapacity(), kilowatt/vehicle.getAlpha(), 1, vehicle.getTravelTime()));
+	
+				vehicle.setTravelTime(vehicle.getTravelTime() + kilowatt/vehicle.getAlpha());
+				
+				intervalSet.setEnd(vehicle.getTravelTime());
+				
+				vehicle.setTravelKm(vehicle.getTravelKm() + rechargerDist);
+				vehicle.setCurrentNodeId(recharger.getId());
+				interval.remove(interval.size()-1);
+				interval.add(intervalSet);
+	
+				return vehicle.getCurrentNodeId();
+			}
+			else {
+				Interval intervalSet= new Interval();
+				intervalSet.start= vehicle.getTravelTime();
+				
+				float battery = vehicle.getCurrentBattery();
+				vehicle.setCurrentBattery(vehicle.getCurrentBattery() + kilowatt);
+				
+				possibleSolution.add(new InfoForWriter(vehicle.getId(), vehicle.getCurrentNodeId(), recharger.getId(), rechargerDist, 0, 0, 0, 0, vehicle.getTravelTime(), battery, vehicle.getCapacity(), kilowatt/vehicle.getAlpha(), 1, vehicle.getTravelTime()));
+	
+				vehicle.setTravelTime(vehicle.getTravelTime() + kilowatt/vehicle.getAlpha());
+				
+				intervalSet.setEnd(vehicle.getTravelTime());
+				
+				vehicle.setTravelKm(vehicle.getTravelKm() + rechargerDist);
+				vehicle.setCurrentNodeId(recharger.getId());
+				
+				interval.add(intervalSet);
+	
+				return vehicle.getCurrentNodeId();
+			}
 		}
 		else {
+			float battery = vehicle.getCurrentBattery();
+			float time= vehicle.getTravelTime();
+			
 			for(Interval takeInterval: interval) {
-				if(vehicle.getTravelTime()>=takeInterval.getStart() && vehicle.getTravelTime()<takeInterval.getEnd()) {
+				if(((time>=takeInterval.getStart() && time<takeInterval.getEnd()) || (time<takeInterval.getStart() && time+ kilowatt/vehicle.getAlpha()>takeInterval.getStart()) || (time<takeInterval.getEnd() && time+ kilowatt/vehicle.getAlpha()>takeInterval.getEnd())) ){
+					vehicle.setTravelTime(takeInterval.getEnd());
+				}
+				if(((vehicle.getTravelTime()>=takeInterval.getStart() && vehicle.getTravelTime()<takeInterval.getEnd()) || (vehicle.getTravelTime()<takeInterval.getStart() && vehicle.getTravelTime()+ kilowatt/vehicle.getAlpha()>takeInterval.getStart()) || (vehicle.getTravelTime()<takeInterval.getEnd() && vehicle.getTravelTime()+ kilowatt/vehicle.getAlpha()>takeInterval.getEnd())) ){
 					vehicle.setTravelTime(takeInterval.getEnd());
 				}
 			}
-			
-			float battery = vehicle.getCurrentBattery();
-			for(Interval takeInterval: interval) {
-				if(vehicle.getTravelTime() + kilowatt/vehicle.getAlpha()>takeInterval.start && vehicle.getTravelTime() + kilowatt/vehicle.getAlpha()<takeInterval.end) {
-					if(!vehicle.isGoToDepot())
-						kilowatt= vehicle.getAlpha()*(takeInterval.start-vehicle.getTravelTime());
-					else {
-						vehicle.setTravelTime(takeInterval.getEnd());
-					}
-				}
-			}
+	
 			vehicle.setCurrentBattery(vehicle.getCurrentBattery() + kilowatt);
 			
 			possibleSolution.add(new InfoForWriter(vehicle.getId(), vehicle.getCurrentNodeId(), recharger.getId(), rechargerDist, 0, 0, 0, 0, initialArrivalTime, battery, vehicle.getCapacity(), kilowatt/vehicle.getAlpha(), 1, vehicle.getTravelTime()));
